@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="si">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <title>Snakes and Ladders 3D</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=DM+Sans:wght@500;600;700&display=swap');
+    :root{
+      color-scheme:light dark;
+      --bg:#eef7ef;--bg2:#d9ecdf;--ink:#183128;--muted:#566a61;
+      --panel:#fffdf7;--panel2:#f6f1e6;--line:#203e33;
+      --red:#e74732;--red-deep:#9f251b;--yellow:#ffd64d;--yellow-deep:#c58b08;
+      --green:#42a765;--green-deep:#19633d;--blue:#489cbe;--cream:#fff5d2;
+      --wood:#7a3c1c;--wood-deep:#4d210e;--shine:rgba(255,255,255,.28);
+      --shadow:0 16px 0 #b8cdbd,0 28px 50px rgba(23,54,41,.2);
+    }
+    @media(prefers-color-scheme:dark){
+      :root{--bg:#10231c;--bg2:#0a1914;--ink:#f6f2df;--muted:#b8c8bf;--panel:#1b3027;--panel2:#243d31;--line:#d8eadf;--shadow:0 14px 0 #07110d,0 28px 50px rgba(0,0,0,.45)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:
+      radial-gradient(circle at 18% 9%,rgba(255,214,77,.24),transparent 26rem),
+      linear-gradient(145deg,var(--bg),var(--bg2));color:var(--ink);font-family:"DM Sans",sans-serif;overflow-x:hidden}
+    button{font:inherit}
+    body:not(.playing) main{display:none}
+    .game-menu{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+    body.playing .game-menu{display:none}
+    .menu-card{width:min(680px,100%);background:var(--panel);border:3px solid var(--line);border-radius:28px;padding:clamp(22px,5vw,42px);box-shadow:0 12px 0 color-mix(in srgb,var(--line) 25%,transparent),0 28px 60px rgba(23,54,41,.2);text-align:center}
+    .menu-card h1{font-family:"Baloo 2",sans-serif;font-size:clamp(2rem,7vw,3.4rem);line-height:.95;margin:0 0 10px;color:var(--ink)}
+    .menu-card p{margin:0 0 24px;color:var(--muted);font-weight:700}
+    .level-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .level-btn{position:relative;min-height:92px;border:2px solid var(--line);border-radius:16px;background:linear-gradient(145deg,color-mix(in srgb,var(--green) 30%,var(--panel)),var(--panel2));color:var(--ink);font-family:"Baloo 2",sans-serif;font-size:1.15rem;font-weight:800;cursor:pointer;box-shadow:0 6px 0 color-mix(in srgb,var(--line) 35%,transparent);transition:transform .15s,box-shadow .15s}
+    .level-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 8px 0 color-mix(in srgb,var(--line) 35%,transparent)}
+    .level-btn:not(:disabled):active{transform:translateY(4px);box-shadow:0 2px 0 color-mix(in srgb,var(--line) 35%,transparent)}
+    .level-btn small{display:block;font-family:"DM Sans",sans-serif;font-size:.68rem;color:var(--muted);margin-top:2px}
+    .level-btn:disabled{cursor:not-allowed;background:var(--panel2);color:var(--muted);opacity:.68;box-shadow:0 4px 0 color-mix(in srgb,var(--line) 18%,transparent)}
+    .level-btn:disabled:before{content:"";display:block;width:17px;height:13px;border:3px solid currentColor;border-radius:4px;margin:0 auto 6px}
+    .level-btn:disabled:after{content:"";position:absolute;width:11px;height:10px;border:3px solid currentColor;border-bottom:0;border-radius:8px 8px 0 0;top:21px;left:50%;transform:translateX(-50%)}
+    main{width:min(1180px,100%);margin:0 auto;padding:clamp(18px,3vw,42px) clamp(14px,3vw,32px) 44px;display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:clamp(22px,4vw,56px);align-items:center;min-height:100vh}
+    .game-stage{min-width:0}
+    .status-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 3% 14px}
+    .status{font-family:"Baloo 2",sans-serif;font-size:clamp(1rem,2vw,1.25rem);font-weight:800;line-height:1.1}
+    .rolls{background:var(--panel);border:2px solid var(--line);border-radius:99px;padding:6px 12px;font-weight:800;font-size:.85rem;box-shadow:0 4px 0 color-mix(in srgb,var(--line) 28%,transparent);white-space:nowrap}
+    .board-perspective{perspective:1200px;padding:0 2% 24px}
+    .board-shell{position:relative;aspect-ratio:1;border:clamp(7px,1.2vw,13px) solid var(--wood);border-radius:18px;background:var(--wood);box-shadow:inset 0 3px 0 #b86e3c,inset 0 -4px 0 var(--wood-deep),var(--shadow);transform:rotateX(4deg);transform-origin:center bottom;overflow:hidden;isolation:isolate;transition:filter .25s}
+    .board-shell:after{content:"";position:absolute;inset:0;z-index:11;pointer-events:none;border-radius:7px;box-shadow:inset 0 0 22px rgba(51,25,7,.25),inset 0 2px 0 rgba(255,255,255,.22)}
+    .board-shell.shake{animation:boardShake .5s ease}.board-shell.ladder-flash{animation:boardGlow .75s ease}
+    @keyframes boardShake{20%{transform:rotateX(4deg) translateX(-5px) rotateZ(-.35deg)}40%{transform:rotateX(4deg) translateX(5px) rotateZ(.35deg)}60%{transform:rotateX(4deg) translateX(-3px)}80%{transform:rotateX(4deg) translateX(2px)}}
+    @keyframes boardGlow{50%{filter:brightness(1.12) saturate(1.18)}}
+    .board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);background:var(--cream)}
+    .cell{position:relative;display:flex;align-items:flex-start;justify-content:flex-start;padding:clamp(2px,.55vw,6px);font-family:"Baloo 2",sans-serif;font-weight:800;font-size:clamp(.52rem,1.25vw,.93rem);line-height:1;color:#1e3029;border-right:1px solid rgba(26,58,46,.28);border-bottom:1px solid rgba(26,58,46,.28);text-shadow:0 1px rgba(255,255,255,.35);box-shadow:inset 0 2px 0 rgba(255,255,255,.16),inset 0 -2px 0 rgba(27,58,46,.1);overflow:hidden}
+    .cell:after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.18),transparent 42%,rgba(20,35,25,.08));pointer-events:none}
+    .cell:nth-child(4n+1){background:#ffdf61}.cell:nth-child(4n+2){background:#bfe8ca}.cell:nth-child(4n+3){background:#8dccdc}.cell:nth-child(4n){background:#f6a693}
+    .cell.goal{background:#f65a43;color:#fff}.cell.start{background:#46ad6c;color:#fff}
+    .cell-label{position:relative;z-index:1}
+    .routes{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;filter:drop-shadow(0 5px 2px rgba(30,35,25,.28));overflow:visible}
+    .token{--x:5%;--y:95%;position:absolute;z-index:8;width:clamp(20px,4.8vw,46px);aspect-ratio:1;left:var(--x);top:var(--y);transform:translate(-50%,-78%);border-radius:50%;background:radial-gradient(circle at 30% 24%,#fffbe0 0 6%,#fff08a 12%,var(--yellow) 34%,#f2a208 69%,#a75c03 100%);border:3px solid #713d07;box-shadow:inset -5px -7px 8px rgba(113,61,7,.28),inset 4px 5px 6px rgba(255,255,255,.38),0 8px 0 #713d07,0 12px 14px rgba(22,39,31,.38);transition:left .27s cubic-bezier(.3,.8,.3,1),top .27s cubic-bezier(.3,.8,.3,1);will-change:left,top}
+    .token:before{content:"";position:absolute;z-index:-1;width:132%;height:38%;left:-16%;bottom:-42%;border-radius:50%;background:rgba(24,45,35,.38);filter:blur(3px);transform:skewX(-12deg)}
+    .token:after{content:"";position:absolute;left:19%;right:19%;top:16%;height:20%;border-radius:50%;background:rgba(255,255,255,.58);filter:blur(.5px)}
+    .board-fx{position:absolute;inset:0;z-index:9;pointer-events:none;overflow:hidden}.board-fx i{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--spark);box-shadow:0 0 8px var(--spark);animation:spark .55s ease-out forwards}
+    @keyframes spark{to{transform:translate(var(--dx),var(--dy)) scale(.1);opacity:0}}
+    .token.jump{animation:hop .27s ease}.token.slide{transition:left .65s cubic-bezier(.3,.8,.4,1),top .65s cubic-bezier(.3,.8,.4,1);animation:wobble .65s ease}.token.climb{transition:left .75s ease,top .75s ease;animation:climb .75s ease}.token.win{animation:victory .65s ease infinite alternate}
+    @keyframes hop{50%{transform:translate(-50%,-112%) scale(1.08)}}
+    @keyframes wobble{25%{rotate:10deg}75%{rotate:-10deg}}
+    @keyframes climb{50%{transform:translate(-50%,-95%) scale(.92)}}
+    @keyframes victory{to{transform:translate(-50%,-95%) scale(1.12);filter:hue-rotate(20deg)}}
+    .console{background:var(--panel);border:2px solid var(--line);border-radius:28px 28px 20px 20px;padding:24px;box-shadow:0 10px 0 color-mix(in srgb,var(--line) 22%,transparent),0 20px 40px rgba(20,45,34,.18);text-align:center}
+    .message{min-height:3.5em;margin:0 auto 16px;font-family:"Baloo 2",sans-serif;font-size:clamp(1.1rem,2.3vw,1.45rem);font-weight:800;line-height:1.25;display:grid;place-items:center;max-width:28ch}
+    .spinner-wrap{position:relative;width:min(250px,75vw);margin:0 auto 18px}
+    .pointer{position:absolute;z-index:4;left:50%;top:-6px;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:30px solid var(--line);filter:drop-shadow(0 2px 0 var(--panel))}
+    .spinner{position:relative;width:100%;aspect-ratio:1;border:8px solid var(--line);border-radius:50%;background:conic-gradient(from -30deg,#f55c49 0 60deg,#ffd957 60deg 120deg,#4eb774 120deg 180deg,#58acd0 180deg 240deg,#f09250 240deg 300deg,#9bcd67 300deg 360deg);box-shadow:inset 0 0 0 3px rgba(255,255,255,.3),inset 0 -12px 18px rgba(20,45,34,.16),0 10px 0 color-mix(in srgb,var(--line) 85%,#000),0 18px 24px rgba(20,45,34,.22);cursor:pointer;touch-action:manipulation;transition:filter .2s,transform .12s}
+    .spinner:active:not([disabled]){transform:translateY(3px);box-shadow:inset 0 0 0 3px rgba(255,255,255,.3),inset 0 -8px 14px rgba(20,45,34,.16),0 7px 0 color-mix(in srgb,var(--line) 85%,#000),0 13px 20px rgba(20,45,34,.2)}
+    .spinner:hover{filter:brightness(1.04)}.spinner:focus-visible{outline:5px solid var(--blue);outline-offset:6px}.spinner[disabled]{cursor:wait;filter:saturate(.8)}
+    .spinner-face{position:absolute;inset:0;border-radius:50%;transition:transform 2.45s cubic-bezier(.12,.65,.1,1)}.spinner-face.instant{transition:none}
+    .num{position:absolute;left:50%;top:50%;font-family:"Baloo 2",sans-serif;font-size:clamp(1.35rem,4vw,2rem);font-weight:800;color:#173228;text-shadow:0 2px 0 rgba(255,255,255,.7);transform:translate(-50%,-50%) rotate(var(--a)) translateY(-78px) rotate(calc(var(--a)*-1))}
+    .hub{position:absolute;z-index:3;inset:50% auto auto 50%;transform:translate(-50%,-50%);width:39%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 36% 28%,#fff8c6,var(--yellow) 50%,#cf8d08);border:4px solid var(--line);box-shadow:0 6px 0 var(--yellow-deep);font-family:"Baloo 2",sans-serif;font-weight:800;color:#392609;font-size:1.05rem;line-height:1}
+    .console-actions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+    .restart,.sound-toggle,.menu-button,.next-button{border:2px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:14px;padding:9px 14px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 color-mix(in srgb,var(--line) 35%,transparent)}
+    .sound-toggle{min-width:104px;background:color-mix(in srgb,var(--green) 20%,var(--panel2))}
+    .sound-toggle[aria-pressed="false"]{background:var(--panel2);color:var(--muted)}
+    .next-button{display:none;background:var(--yellow);color:#352408}.next-button.show{display:inline-block}
+    .restart:active,.sound-toggle:active,.menu-button:active,.next-button:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--line) 35%,transparent)}
+    .legend{margin:22px 0 0;padding-top:18px;border-top:1px solid color-mix(in srgb,var(--line) 25%,transparent);display:grid;gap:10px;text-align:left;color:var(--muted);font-size:.84rem;font-weight:700}
+    .legend div{display:flex;align-items:center;gap:9px}.swatch{width:27px;height:7px;border-radius:9px;background:var(--green);box-shadow:0 3px 0 var(--green-deep);flex:none}.swatch.snake{height:9px;background:var(--red);box-shadow:0 3px 0 var(--red-deep)}
+    .confetti{position:fixed;inset:0;pointer-events:none;z-index:20;overflow:hidden}.confetti i{position:absolute;width:10px;height:18px;top:-24px;background:var(--c);animation:fall var(--t) linear forwards;left:var(--l);rotate:var(--r)}
+    @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+    @media(max-width:800px){
+      main{display:block;min-height:auto;padding-top:16px}.game-stage{max-width:650px;margin:auto}.status-row{margin-bottom:10px}.board-perspective{padding-bottom:28px}.board-shell{border-radius:12px;transform:rotateX(2deg)}.console{max-width:650px;margin:0 auto;padding:20px 16px}.spinner-wrap{width:min(220px,62vw)}.num{transform:translate(-50%,-50%) rotate(var(--a)) translateY(-68px) rotate(calc(var(--a)*-1))}.legend{grid-template-columns:1fr 1fr}.message{min-height:2.7em;margin-bottom:12px}.level-grid{grid-template-columns:repeat(2,1fr)}.level-btn{min-height:76px}.menu-card{padding:24px 18px}
+    }
+    @media(max-width:380px){.num{transform:translate(-50%,-50%) rotate(var(--a)) translateY(-58px) rotate(calc(var(--a)*-1))}.cell{font-size:.48rem}.legend{grid-template-columns:1fr}.console-actions{gap:8px}.restart,.sound-toggle,.menu-button,.next-button{padding:8px 11px;font-size:.82rem}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+<section class="game-menu" id="gameMenu" aria-label="Level selection">
+  <div class="menu-card">
+    <h1>Level ekak thoranna</h1>
+    <p>Level eka dinuwama ilanga eka unlock wenawa.</p>
+    <div class="level-grid" id="levelGrid"></div>
+  </div>
+</section>
+<main>
+  <section class="game-stage" aria-label="Snakes and ladders board">
+    <div class="status-row"><div><div class="status" id="status">Dan 1 kotuwe</div><div class="rolls" id="levelLabel">Level 1</div></div><div class="rolls">Ravum: <span id="rollCount">0</span></div></div>
+    <div class="board-perspective">
+      <div class="board-shell">
+        <div class="board" id="board"></div>
+        <svg class="routes" id="routes" viewBox="0 0 1000 1000" aria-hidden="true"></svg>
+        <div class="token" id="token" aria-label="Your playing piece"></div>
+        <div class="board-fx" id="boardFx" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+  <aside class="console">
+    <p class="message" id="message" role="status" aria-live="polite">Ravuma touch karala game eka patan ganna!</p>
+    <div class="spinner-wrap">
+      <div class="pointer" aria-hidden="true"></div>
+      <button class="spinner" id="spinButton" aria-label="Spin the number wheel">
+        <span class="spinner-face" id="spinnerFace" aria-hidden="true">
+          <span class="num" style="--a:0deg">1</span><span class="num" style="--a:60deg">2</span><span class="num" style="--a:120deg">3</span><span class="num" style="--a:180deg">4</span><span class="num" style="--a:240deg">5</span><span class="num" style="--a:300deg">6</span>
+        </span>
+        <span class="hub">TOUCH</span>
+      </button>
+    </div>
+    <div class="console-actions">
+      <button class="restart" id="restart">Aye patan ganna</button>
+      <button class="menu-button" id="menuButton" type="button">Levels</button>
+      <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">Sound ON</button>
+      <button class="next-button" id="nextButton" type="button">Ilanga level eka</button>
+    </div>
+    <div class="legend">
+      <div><span class="swatch"></span>Inimaga — ikmanin udata</div>
+      <div><span class="swatch snake"></span>Naya — aye pahalata</div>
+    </div>
+  </aside>
+</main>
+<div class="confetti" id="confetti" aria-hidden="true"></div>
+<script>
+(function(){
+  'use strict';
+  var board=document.getElementById('board'), routes=document.getElementById('routes'), token=document.getElementById('token');
+  var spinButton=document.getElementById('spinButton'), spinnerFace=document.getElementById('spinnerFace'), message=document.getElementById('message');
+  var status=document.getElementById('status'), rollCount=document.getElementById('rollCount'), restart=document.getElementById('restart');
+  var soundToggle=document.getElementById('soundToggle'), boardFx=document.getElementById('boardFx'), boardShell=document.querySelector('.board-shell');
+  var gameMenu=document.getElementById('gameMenu'),levelGrid=document.getElementById('levelGrid'),levelLabel=document.getElementById('levelLabel'),menuButton=document.getElementById('menuButton'),nextButton=document.getElementById('nextButton');
+  var levels=[
+    {l:{3:22,8:30,20:41,28:55,44:72,58:77,70:89,80:99},s:{27:5,39:19,54:34,62:18,76:46,88:67}},
+    {l:{4:25,11:31,22:43,37:59,51:72,68:87,79:96},s:{17:6,35:14,48:26,57:19,74:52,86:63,94:71}},
+    {l:{6:24,18:38,32:52,47:66,63:81,78:94},s:{16:5,29:9,41:21,55:33,69:46,82:58,91:67,98:76}},
+    {l:{7:23,21:39,35:53,52:70,71:88,83:96},s:{18:4,30:12,43:20,56:31,68:44,77:54,87:61,95:73,99:79}},
+    {l:{9:26,24:42,46:62,65:82,81:94},s:{15:3,28:7,39:18,50:29,61:37,72:48,84:59,92:66,97:74,99:80}},
+    {l:{12:28,31:48,53:69,73:88,84:96},s:{19:4,27:8,38:16,49:23,58:34,67:41,79:52,86:63,93:70,98:75,99:82}},
+    {l:{14:29,36:51,57:72,76:90},s:{18:5,26:7,34:12,45:22,54:30,64:39,73:47,82:58,89:65,94:71,98:78,99:85}},
+    {l:{16:31,42:58,68:83,81:93},s:{20:3,29:8,37:14,46:21,55:32,63:40,72:49,80:57,88:62,92:69,96:74,98:79,99:86}},
+    {l:{18:33,49:63,74:87},s:{17:4,25:6,34:11,43:19,52:28,61:36,70:45,79:54,86:60,91:67,94:71,96:73,98:77,99:84}},
+    {l:{22:38,67:79},s:{15:2,24:5,33:10,42:18,51:27,60:35,69:44,76:50,83:56,89:64,92:68,95:72,97:75,98:78,99:81}}
+  ];
+  var ladders=levels[0].l,snakes=levels[0].s,currentLevel=1,unlockedLevel=1;
+  var position=1, rolls=0, spinning=false, rotation=0, audioCtx=null, soundOn=true, spinTicks=null;
+
+  function cellCol(n){var off=(n-1)%10,row=Math.floor((n-1)/10);return row%2===0?off:9-off}
+  function point(n){return {x:cellCol(n)*100+50,y:(9-Math.floor((n-1)/10))*100+50}}
+  function addCell(n){var el=document.createElement('div');el.className='cell'+(n===1?' start':'')+(n===100?' goal':'');el.dataset.cell=n;var span=document.createElement('span');span.className='cell-label';span.textContent=n;el.appendChild(span);board.appendChild(el)}
+  for(var visualRow=9;visualRow>=0;visualRow--){var start=visualRow*10+1;var nums=[];for(var i=0;i<10;i++)nums.push(start+i);if(visualRow%2===1)nums.reverse();nums.forEach(addCell)}
+
+  function svg(tag,attrs){var e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k])});return e}
+  function drawLadder(a,b){var p1=point(a),p2=point(b),dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.sqrt(dx*dx+dy*dy),nx=-dy/len*18,ny=dx/len*18;
+    var g=svg('g',{});g.appendChild(svg('line',{x1:p1.x+nx,y1:p1.y+ny+4,x2:p2.x+nx,y2:p2.y+ny+4,stroke:'#0b3f28','stroke-width':'21','stroke-linecap':'round'}));g.appendChild(svg('line',{x1:p1.x-nx,y1:p1.y-ny+4,x2:p2.x-nx,y2:p2.y-ny+4,stroke:'#0b3f28','stroke-width':'21','stroke-linecap':'round'}));g.appendChild(svg('line',{x1:p1.x+nx,y1:p1.y+ny,x2:p2.x+nx,y2:p2.y+ny,stroke:'#238356','stroke-width':'14','stroke-linecap':'round'}));g.appendChild(svg('line',{x1:p1.x-nx,y1:p1.y-ny,x2:p2.x-nx,y2:p2.y-ny,stroke:'#238356','stroke-width':'14','stroke-linecap':'round'}));
+    var steps=Math.max(3,Math.floor(len/62));for(var j=1;j<steps;j++){var t=j/steps,x=p1.x+dx*t,y=p1.y+dy*t;g.appendChild(svg('line',{x1:x+nx,y1:y+ny+3,x2:x-nx,y2:y-ny+3,stroke:'#7b5b0e','stroke-width':'15','stroke-linecap':'round'}));g.appendChild(svg('line',{x1:x+nx,y1:y+ny,x2:x-nx,y2:y-ny,stroke:'#ffe16a','stroke-width':'10','stroke-linecap':'round'}))}routes.appendChild(g)}
+  function drawSnake(a,b,idx){var head=point(a),tail=point(b),dx=tail.x-head.x,dy=tail.y-head.y;var bend=(idx%2?1:-1)*95;var d='M '+head.x+' '+head.y+' C '+(head.x+bend)+' '+(head.y+dy*.28)+', '+(tail.x-bend)+' '+(head.y+dy*.72)+', '+tail.x+' '+tail.y;
+    var g=svg('g',{});g.appendChild(svg('path',{d:d,fill:'none',stroke:'rgba(52,22,13,.38)','stroke-width':'39','stroke-linecap':'round',transform:'translate(0 7)'}));g.appendChild(svg('path',{d:d,fill:'none',stroke:'#81281d','stroke-width':'33','stroke-linecap':'round'}));g.appendChild(svg('path',{d:d,fill:'none',stroke:idx%2?'#f96b4e':'#ef4b3e','stroke-width':'23','stroke-linecap':'round','stroke-dasharray':'36 11'}));g.appendChild(svg('path',{d:d,fill:'none',stroke:'rgba(255,255,255,.24)','stroke-width':'5','stroke-linecap':'round','stroke-dasharray':'24 23'}));g.appendChild(svg('ellipse',{cx:head.x,cy:head.y,rx:'27',ry:'22',fill:'#f65a43',stroke:'#81281d','stroke-width':'7',transform:'rotate('+(Math.atan2(dy,dx)*180/Math.PI+90)+' '+head.x+' '+head.y+')'}));
+    var ang=Math.atan2(dy,dx),px=-Math.sin(ang)*9,py=Math.cos(ang)*9,fx=Math.cos(ang)*9,fy=Math.sin(ang)*9;g.appendChild(svg('circle',{cx:head.x+fx+px,cy:head.y+fy+py,r:'5',fill:'#fff'}));g.appendChild(svg('circle',{cx:head.x+fx-px,cy:head.y+fy-py,r:'5',fill:'#fff'}));g.appendChild(svg('circle',{cx:head.x+fx+px+Math.cos(ang)*2,cy:head.y+fy+py+Math.sin(ang)*2,r:'2.3',fill:'#17271f'}));g.appendChild(svg('circle',{cx:head.x+fx-px+Math.cos(ang)*2,cy:head.y+fy-py+Math.sin(ang)*2,r:'2.3',fill:'#17271f'}));g.appendChild(svg('path',{d:'M '+(head.x+Math.cos(ang)*24)+' '+(head.y+Math.sin(ang)*24)+' l '+(Math.cos(ang)*14)+' '+(Math.sin(ang)*14),stroke:'#ffcfca','stroke-width':'4','stroke-linecap':'round'}));routes.appendChild(g)}
+  function redrawRoutes(){routes.innerHTML='';Object.keys(ladders).forEach(function(k){drawLadder(+k,ladders[k])});Object.keys(snakes).forEach(function(k,i){drawSnake(+k,snakes[k],i)})}
+
+  function place(n,klass){var p=point(n);token.style.setProperty('--x',(p.x/10)+'%');token.style.setProperty('--y',(p.y/10)+'%');token.className='token'+(klass?' '+klass:'')}
+  function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
+  function ensureAudio(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx}catch(e){return null}}
+  function tone(freq,dur,type,gain,delay,endFreq){if(!soundOn)return;var ctx=ensureAudio();if(!ctx)return;var at=ctx.currentTime+(delay||0),o=ctx.createOscillator(),g=ctx.createGain();o.type=type||'sine';o.frequency.setValueAtTime(freq,at);if(endFreq)o.frequency.exponentialRampToValueAtTime(endFreq,at+dur/1000);g.gain.setValueAtTime(gain||.05,at);g.gain.exponentialRampToValueAtTime(.001,at+dur/1000);o.connect(g);g.connect(ctx.destination);o.start(at);o.stop(at+dur/1000+.03)}
+  function noise(dur,gain,delay){if(!soundOn)return;var ctx=ensureAudio();if(!ctx)return;var len=Math.ceil(ctx.sampleRate*dur/1000),buf=ctx.createBuffer(1,len,ctx.sampleRate),data=buf.getChannelData(0);for(var i=0;i<len;i++)data[i]=(Math.random()*2-1)*(1-i/len);var src=ctx.createBufferSource(),g=ctx.createGain(),at=ctx.currentTime+(delay||0);src.buffer=buf;g.gain.setValueAtTime(gain||.025,at);g.gain.exponentialRampToValueAtTime(.001,at+dur/1000);src.connect(g);g.connect(ctx.destination);src.start(at)}
+  function soundStep(n){tone(235+(n%5)*22,85,'sine',.035);tone(118,70,'triangle',.018);noise(45,.012)}
+  function soundLadder(){[0,1,2,3,4].forEach(function(i){tone([330,440,523,659,784][i],220,'sine',.045,i*.105)});tone(165,650,'triangle',.022,0,330)}
+  function soundSnake(){tone(370,650,'sawtooth',.045,0,78);noise(520,.028);setTimeout(function(){tone(82,300,'square',.025)},420)}
+  function soundError(){tone(190,230,'triangle',.045);tone(145,270,'sine',.03,.12)}
+  function soundResult(value){tone(610+value*32,180,'triangle',.055);tone(305+value*16,280,'sine',.03,.04)}
+  function soundVictory(){[523,659,784,1047].forEach(function(f,i){tone(f,520,'triangle',.05,i*.15)});setTimeout(function(){noise(700,.02)},150)}
+  function burst(n,color){var p=point(n);for(var i=0;i<12;i++){var bit=document.createElement('i'),angle=Math.PI*2*i/12,dist=22+Math.random()*36;bit.style.left=(p.x/10)+'%';bit.style.top=(p.y/10)+'%';bit.style.setProperty('--dx',(Math.cos(angle)*dist)+'px');bit.style.setProperty('--dy',(Math.sin(angle)*dist)+'px');bit.style.setProperty('--spark',color||'#ffe16a');boardFx.appendChild(bit);setTimeout(function(el){return function(){el.remove()}}(bit),620)}}
+  function boardEffect(name){boardShell.classList.remove('shake','ladder-flash');void boardShell.offsetWidth;boardShell.classList.add(name);setTimeout(function(){boardShell.classList.remove(name)},800)}
+  async function moveBy(amount){var target=position+amount;if(target>100){message.textContent='100ට hariyatama enna one — aye try karamu!';soundError();boardEffect('shake');spinning=false;spinButton.disabled=false;return}
+    for(var n=position+1;n<=target;n++){position=n;place(position,'jump');status.textContent='Dan '+position+' kotuwe';soundStep(n);await wait(285)}
+    if(ladders[position]){var from=position;burst(from,'#ffe16a');position=ladders[position];message.textContent=from+'! Inimaga hambuna — '+position+'ta udata!';place(position,'climb');soundLadder();boardEffect('ladder-flash');await wait(780);burst(position,'#8bf0ac')}
+    else if(snakes[position]){var sfrom=position;burst(sfrom,'#ff715f');position=snakes[position];message.textContent=sfrom+'! Naya allagaththa — '+position+'ta pahalata!';place(position,'slide');soundSnake();boardEffect('shake');await wait(680);burst(position,'#ff715f')}
+    else if(position<100){message.textContent=position+' kotuwe. Ravuma aye touch karanna.'}
+    status.textContent=position===100?'Oba dinuwa!':('Dan '+position+' kotuwe');
+    if(position===100){win()}else{spinning=false;spinButton.disabled=false}
+  }
+  function spin(){if(spinning||position===100)return;ensureAudio();spinning=true;spinButton.disabled=true;rolls++;rollCount.textContent=rolls;var value=Math.floor(Math.random()*6)+1;var turns=5+Math.floor(Math.random()*3);rotation=Math.ceil(rotation/360)*360+turns*360+((360-(value-1)*60)%360);spinnerFace.style.transform='rotate('+rotation+'deg)';message.textContent='Ravuma karakenawa…';noise(120,.025);var tick=0;clearInterval(spinTicks);spinTicks=setInterval(function(){tone(340+(tick%2)*70,38,'square',.018);tick++},115);setTimeout(function(){clearInterval(spinTicks);message.textContent=value+' awa!';soundResult(value);setTimeout(function(){moveBy(value)},430)},2450)}
+  function win(){if(currentLevel<10)unlockedLevel=Math.max(unlockedLevel,currentLevel+1);renderMenu();message.textContent=currentLevel<10?('Supiri! Level '+currentLevel+' dinuwa — Level '+(currentLevel+1)+' unlock una!'):('Supiri! Level 10 dinuwa — game eka complete!');token.className='token win';spinButton.disabled=true;nextButton.textContent=currentLevel<10?'Ilanga level eka':'Levels balanna';nextButton.classList.add('show');soundVictory();burst(100,'#ffe16a');var box=document.getElementById('confetti');box.innerHTML='';var colors=['#f55c49','#ffd957','#4eb774','#58acd0'];for(var i=0;i<64;i++){var bit=document.createElement('i');bit.style.setProperty('--l',(Math.random()*100)+'%');bit.style.setProperty('--t',(2.4+Math.random()*2.8)+'s');bit.style.setProperty('--r',(Math.random()*180)+'deg');bit.style.setProperty('--c',colors[i%colors.length]);bit.style.animationDelay=(Math.random()*.8)+'s';box.appendChild(bit)}}
+  function reset(){clearInterval(spinTicks);position=1;rolls=0;spinning=false;rotation=0;spinnerFace.classList.add('instant');spinnerFace.style.transform='rotate(0deg)';void spinnerFace.offsetWidth;spinnerFace.classList.remove('instant');rollCount.textContent='0';message.textContent='Ravuma touch karala game eka patan ganna!';status.textContent='Dan 1 kotuwe';spinButton.disabled=false;nextButton.classList.remove('show');token.className='token';place(1);boardFx.innerHTML='';document.getElementById('confetti').innerHTML='';tone(420,110,'sine',.035)}
+  function difficultyName(n){if(n<=3)return 'Pahasu';if(n<=6)return 'Meda';if(n<=9)return 'Amaru';return 'Master'}
+  function renderMenu(){levelGrid.innerHTML='';for(var i=1;i<=10;i++){var btn=document.createElement('button');btn.type='button';btn.className='level-btn';btn.disabled=i>unlockedLevel;btn.setAttribute('aria-label','Level '+i+(btn.disabled?' locked':''));btn.innerHTML='Level '+i+'<small>'+(btn.disabled?'Locked':difficultyName(i))+'</small>';if(!btn.disabled){btn.dataset.level=i;btn.addEventListener('click',function(){startLevel(+this.dataset.level)})}levelGrid.appendChild(btn)}}
+  function startLevel(n){if(n>unlockedLevel)return;currentLevel=n;ladders=levels[n-1].l;snakes=levels[n-1].s;levelLabel.textContent='Level '+n;redrawRoutes();reset();document.body.classList.add('playing');tone(460+n*18,180,'triangle',.04)}
+  function showMenu(){if(spinning)return;document.body.classList.remove('playing');renderMenu()}
+  function toggleSound(){soundOn=!soundOn;soundToggle.setAttribute('aria-pressed',String(soundOn));soundToggle.textContent=soundOn?'Sound ON':'Sound OFF';if(soundOn){ensureAudio();tone(540,120,'sine',.04)}else{clearInterval(spinTicks)}}
+  spinButton.addEventListener('click',spin);restart.addEventListener('click',reset);soundToggle.addEventListener('click',toggleSound);menuButton.addEventListener('click',showMenu);nextButton.addEventListener('click',function(){if(currentLevel<10)startLevel(currentLevel+1);else showMenu()});renderMenu();place(1);
+})();
+</script>
+</body>
+</html>
